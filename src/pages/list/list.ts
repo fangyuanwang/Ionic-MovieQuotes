@@ -1,5 +1,7 @@
 import { Component } from '@angular/core';
-import { IonicPage, NavController, NavParams } from 'ionic-angular';
+import { IonicPage, NavController, NavParams, AlertController } from 'ionic-angular';
+import { AngularFireDatabase, FirebaseListObservable } from "angularfire2/database";
+import { MovieQuote } from "../../models/movie-quote";
 
 /**
  * Generated class for the ListPage page.
@@ -15,11 +17,53 @@ import { IonicPage, NavController, NavParams } from 'ionic-angular';
 })
 export class ListPage {
 
-  constructor(public navCtrl: NavController, public navParams: NavParams) {
+  public movieQuotesStream: FirebaseListObservable<MovieQuote[]>;
+
+  constructor(public navCtrl: NavController, public navParams: NavParams,
+    private db: AngularFireDatabase,
+    public alertCtrl: AlertController) {
+      this.movieQuotesStream = this.db.list('/quotes');
   }
 
-  ionViewDidLoad() {
-    console.log('ionViewDidLoad ListPage');
+  showAddQuoteDialog(): void {
+    const prompt = this.alertCtrl.create({
+      title: 'Add Quote',
+      inputs: [
+        {
+          name: 'quote',
+          placeholder: 'Quote that you like'
+        },
+        {
+          name: 'movie',
+          placeholder: 'From movie'
+        },
+      ],
+      buttons: [
+        {
+          text: 'Cancel',
+          handler: (data: any) => {
+            
+          }
+        },
+        {
+          text: 'Add Quote',
+          handler: (data:any) => {
+            console.log('Saved clicked');
+            if (data.quote && data.movie) {
+              this.movieQuotesStream.push(data);
+            } else {
+              console.log("Not a valid MovieQuote");
+              return false;
+            }
+          }
+        }
+      ]
+    });
+    prompt.present();
+  }
+
+  removeQuote(quoteToDeleteKey: string) {
+    this.movieQuotesStream.remove(quoteToDeleteKey);
   }
 
 }
