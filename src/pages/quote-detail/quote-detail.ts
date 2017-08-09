@@ -1,5 +1,8 @@
-import { Component } from '@angular/core';
-import { IonicPage, NavController, NavParams } from 'ionic-angular';
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { IonicPage, NavController, NavParams, AlertController } from 'ionic-angular';
+import { FirebaseObjectObservable, AngularFireDatabase } from "angularfire2/database";
+import { MovieQuote } from "../../models/movie-quote";
+import { Subscription } from "rxjs/Subscription";
 
 /**
  * Generated class for the QuoteDetailPage page.
@@ -13,13 +16,65 @@ import { IonicPage, NavController, NavParams } from 'ionic-angular';
   selector: 'page-quote-detail',
   templateUrl: 'quote-detail.html',
 })
-export class QuoteDetailPage {
+export class QuoteDetailPage implements OnInit, OnDestroy{
 
-  constructor(public navCtrl: NavController, public navParams: NavParams) {
+  movieQuoteStream: FirebaseObjectObservable<MovieQuote>;
+  movieQuote: MovieQuote;
+  private movieQuoteSubscription: Subscription;
+
+  constructor(public navCtrl: NavController, public navParams: NavParams,
+    private db: AngularFireDatabase,
+    public alertCtrl: AlertController) {
+    
   }
 
-  ionViewDidLoad() {
-    console.log('ionViewDidLoad QuoteDetailPage');
+  ngOnInit(): void {
+    const movieQuoteKey = this.navParams.get('key');
+    this.movieQuoteStream = this.db.object(`/quotes/${movieQuoteKey}`);
+    this.movieQuoteSubscription = this.movieQuoteStream.subscribe( (movieQuote: MovieQuote) => { 
+      this.movieQuote = movieQuote;
+    })
+  }
+  ngOnDestroy(): void {
+    this.movieQuoteSubscription.unsubscribe();
   }
 
+  editQuote(): void {
+    const prompt = this.alertCtrl.create({
+      title: 'Edit Quote',
+      inputs: [
+        {
+          name: 'quote',
+          placeholder: 'Quote that you like',
+          value: this.movieQuote.quote
+        },
+        {
+          name: 'movie',
+          placeholder: 'From movie',
+          value: this.movieQuote.movie
+        },
+      ],
+      buttons: [
+        {
+          text: 'Cancel',
+          handler: (data: any) => {
+            
+          }
+        },
+        {
+          text: 'Edit Quote',
+          handler: (data:any) => {
+            console.log('Saved clicked');
+            if (data.quote && data.movie) {
+              this.movieQuoteStream.set(data);
+            } else {
+              console.log("Not a valid MovieQuote");
+              return false;
+            }
+          }
+        }
+      ]
+    });
+    prompt.present();
+  }
 }
